@@ -1,0 +1,47 @@
+# 使用 CF Worker 搭建的 trojan节点(TLS+WS)
+- type: trojan
+  name: ""
+  server: ""
+  port: 8443 # 可以修改这里，作为默认端口
+  password: ed27acfc-7261-4e3d-ae5f-a48b89412b2a # 修改这里
+  network: ws
+  sni: 您的域名.cloudns.org # 修改这里
+  skip-cert-verify: true
+  client-fingerprint: chrome
+  udp: false
+  ws-opts:
+    path: /
+    headers:
+      Host: 您的域名.cloudns.org # 修改这里
+  alpn:
+    - h3
+# 使用 CF Worker/Pages 搭建的 vless 节点(WS)
+- type: vless
+  name: ""
+  server: ""
+  port: 8880 # 可以修改这里，作为默认端口
+  uuid: ed27acfc-7261-4e3d-ae5f-a48b89412b2a # 修改这里
+  network: ws
+  tls: false # 非TLS模式，如果是tls模式，请将tls改为true，如下所示
+  udp: false
+  servername: 您的子域.workers.dev # 修改这里
+  client-fingerprint: chrome
+  ws-opts:
+    path: /?ed=2048
+# 使用 CF Worker/Pages 搭建的 vless 节点(TLS+WS)
+- type: vless
+  name: ""
+  server: ""
+  port: 8443 # 可以修改这里，作为默认端口
+  uuid: ed27acfc-7261-4e3d-ae5f-a48b89412b2a # 修改这里
+  network: ws
+  tls: true
+  udp: false
+  servername: 您的域名.pages.dev # 修改这里
+  client-fingerprint: chrome
+  ws-opts:
+    path: /?ed=2048
+    headers:
+      Host: 您的域名.pages.dev # 修改这里
+  alpn:
+    - h3

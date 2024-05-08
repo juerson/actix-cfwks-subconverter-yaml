@@ -1,0 +1,19 @@
+CloudflareST.exe程序的来源：
+
+https://github.com/XIU2/CloudflareSpeedTest
+
+测延迟（禁止测速）
+
+CloudflareST.exe -f ipv4.txt -tp 443 -o result.csv -dd
+
+CloudflareST.exe -tl 300 -tll 10 -f ipv4.txt -tp 443 -o result.csv -dd
+
+测速100个（需要很长时间）
+
+CloudflareST.exe -tl 300 -tll 10 -f ipv4.txt -tp 443 -o result.csv -url https://speed.cloudflare.com/__down?bytes=500000000 -dn 100
+
+————————————————————————————————
+
+ipspeedtest.exe 程序的来源：
+
+https://github.com/badafans/Cloudflare-IP-SpeedTest

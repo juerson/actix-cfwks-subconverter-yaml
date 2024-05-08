@@ -1,0 +1,18 @@
+[package]
+name = "actix-cfwks-subconverter"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4"
+serde = "1.0"
+serde_yaml = "0.9"
+serde_json = "1.0"
+regex = "1.10.4"
+encoding = "0.2"
+serde_urlencoded = "0.7.1"
+rand = "0.8.5"
+urlencoding = "2.1.3"
+serde_qs = "0.13.0"

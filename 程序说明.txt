@@ -1,0 +1,51 @@
+软件功能：将优选的IP(不是WARP的优选IP)，写入到 Cloudflare 搭建的 vless/trojan 协议的配置节点中，并转换为 v2ray、clash 订阅!
+
+web服务地址：http://127.0.0.1:18085
+
+订阅地址格式：http://127.0.0.1:18085/sub?target=[v2ray,clash]&nodeSize=[1..?]&proxytype=[vless,trojan]&userid=[1..255]&tls=[true,false]&dport=[80..65535]
+
+订阅示例：
+
+http://127.0.0.1:18085/sub?target=v2ray
+http://127.0.0.1:18085/sub?target=clash
+http://127.0.0.1:18085/sub?target=clash&userid=1
+http://127.0.0.1:18085/sub?target=v2ray&userid=1
+http://127.0.0.1:18085/sub?target=clash&proxy=trojan
+http://127.0.0.1:18085/sub?target=clash&proxy=vless
+http://127.0.0.1:18085/sub?target=v2ray&proxy=vless&userid=3
+http://127.0.0.1:18085/sub?target=v2ray&nodesize=100
+http://127.0.0.1:18085/sub?target=v2ray&tls=true&dport=8443
+
+url中的参数介绍：
+
+1、target：【必选】转换的目标客户端，只支持转换为v2ray、clash，而且是TLS+WS的；vless节点的，支持不是TLS加密的。
+2、nodesize（nodecount）：您要的节点数量，是从data目录下，读取到txt、csv文件的所有数据中，截取前n个数据来构建节点的信息。
+注意： 
+    (1)如果符合要求的txt、csv文件多起来，读取到数据比较多，文件之间的数据排序跟文件名有一点关系；
+    (2)不是从data目录中读取到的数据中，随机选择n个数据；而是按照读取到的数据先后顺序，截取前n个数据来构建节点的信息。
+
+3、proxy（proxytype）：选择什么协议的节点？只能选择vless、trojan，这里指您在配置文件中，存放的节点类型，符合要求的，才使用它。
+4、userid：指定使用哪个配置文件中的节点，生成v2ray链接或clash配置文件？它是虚构的，是根据程序读取 node-config.yaml 的配置，数组下标+1来计算的。
+    例如：
+        userid=1就是使用第一个节点的配置信息，2就是使用第二个节点的配置信息，以此类推。
+        userid值的范围是[0,255]，为0是随机节点的配置信息，超过配置的总个数也是随机节点的配置信息。
+    注意：
+        (1)proxy 和 userid 两个都设置且设置不当，可能导致生成空白页面，要传入正确的值才能生成节点信息。
+           例如：proxy=vless&userid=2，配置文件中第2个节点不是vless，就不能生成节点的配置信息，导致空白页面出现。
+        (2)userid值超出[0,255]范围，程序会报错，显示"该网页无法正常运作"。
+
+5、tls（tlsmode）：用于控制使用哪些端口（包括使用哪些节点）。tls=true/1/tls表示使用tls加密，false/0表示不使用tls加密；如果为空/不传入该参数，就不区分tls和非tls。
+6、dport（defaultport）：data目录下，读取到txt、csv文件的数据中，没有端口的情况，使用这里设置的默认端口。
+    使用注意：
+        (1)url地址中传入的端口，只覆盖从配置文件中读取到的PORT; 
+        (2)data目录下读取到的数据，有端口的情况，不会使用dport设置的默认端口；
+        (3)只有从data文件夹中读取的数据中，没有端口的情况，才使用dport设置的默认端口；
+        (4)dport 和 tls 两个都设置且设置不当，可能导致生成空白页面，要传入符合条件的端口/tls模式，才能生成节点信息，
+        例如：dport=443&tls=false，这种情况错误很明显，非tls加密的不包括[443, 2053, 2083, 2087, 2096, 8443]。
+    
+    端口的权重：data数据的端口 > url端口(dport) > 配置文件端口；配置文件中，没有设置有端口，就使用443端口。
+    
+温馨提示：
+
+使用 Cloudflare workers 搭建的 trojan 节点，转换为 clash 使用，PROXYIP 地址可能会丢失（查询不到，也不能使用它作为落脚IP），跟没有设置 PROXYIP 效果一样。
+导致一些网站无法打开，比如：ChatGPT、Cloudflare 等，但是生成的v2ray订阅，可以在v2rayN软件中正常使用，PROXYIP 的地址能查询到，而且能够正常使用 ChatGPT 等。
