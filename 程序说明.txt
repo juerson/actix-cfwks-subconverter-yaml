@@ -1,4 +1,4 @@
-软件功能：将优选的IP(不是WARP的优选IP)，写入到 Cloudflare 搭建的 vless/trojan 协议的配置节点中，并转换为 v2ray、clash 订阅!
+软件功能：将优选的IP(不是WARP的优选IP)或域名，写入到 Cloudflare 搭建的 vless/trojan 协议的配置节点中，并转换为 v2ray、clash 订阅!
 
 web服务地址：http://127.0.0.1:18085
 

@@ -1,5 +1,6 @@
 use encoding::all::GBK;
 use encoding::{DecoderTrap, Encoding};
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -7,26 +8,25 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 
-#[allow(dead_code)]
-pub fn read_ip_from_files(
+lazy_static! {
+    static ref IPV4_OR_IPV6_REGEX: Regex = Regex::new(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b|([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b").unwrap(); // 匹配ipv4地址或ipv6地址
+    static ref IP_WITH_PORT_REGEX: Regex = Regex::new(
+        r"\b((?:[0-9]{1,3}\.){3}[0-9]{1,3}),(\d{2,5})\b|(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}),(\d{2,5})\b",
+    )
+    .unwrap(); // 匹配csv中的IP和端口（比如：192.168.1.1,80）
+    static ref DOMAIN_REGEX: Regex = Regex::new(r"\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b").unwrap(); // 粗略匹配一级域名、子域名，不保证后缀的域名真实存在
+}
+
+pub fn read_ip_domain_from_files(
     folder_path: &str,
     tls_mode: &str,
 ) -> io::Result<(Vec<String>, Vec<String>)> {
     // 读取指定文件夹下的所有文件
     let paths = fs::read_dir(folder_path)?;
-    // 只匹配IP地址：IPv4 或 IPv6
-    let ip_re =
-        Regex::new(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b|([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b")
-            .unwrap();
-    // csv中，匹配ipv4/ipv6,port的格式为："IPv4,PORT" 或 "IPv6,PORT"
-    let ip_with_port_re = Regex::new(
-        r"\b((?:[0-9]{1,3}\.){3}[0-9]{1,3}),(\d{2,5})\b|(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}),(\d{2,5})\b",
-    )
-    .unwrap();
 
     // 存储匹配到的 IP 地址和端口的向量
     let mut ip_with_port_vec: Vec<String> = Vec::new();
-
+    // 存放单独的IP或域名
     let mut ips: Vec<String> = Vec::new();
 
     // 遍历文件夹中的每个文件
@@ -53,9 +53,7 @@ pub fn read_ip_from_files(
                         extract_ip_port_from_file(
                             content,
                             tls_mode,
-                            &ip_with_port_re,
                             &mut ip_with_port_vec,
-                            &ip_re,
                             &mut ips,
                         );
                     } else {
@@ -67,9 +65,7 @@ pub fn read_ip_from_files(
                             extract_ip_port_from_file(
                                 &decoded_string,
                                 tls_mode,
-                                &ip_with_port_re,
                                 &mut ip_with_port_vec,
-                                &ip_re,
                                 &mut ips,
                             );
                         }
@@ -83,18 +79,14 @@ pub fn read_ip_from_files(
     // 去重
     let unique_ips_vec = de_weight(ips);
     let unique_ip_with_port_vec = de_weight(ip_with_port_vec);
-
     Ok((unique_ips_vec, unique_ip_with_port_vec))
 }
 
-// 提取的ip和端口存放到ip_with_port_vec中，只提取到IP的就存放到ips中
-// 代码中包含，根据tls_mode剔除不要的端口的数据
+// 提取的ip和端口存放到ip_with_port_vec中，只提取到IP/域名的就存放到ips中
 fn extract_ip_port_from_file(
     content: &str,
     tls_mode: &str,
-    ip_with_port_re: &Regex,
     ip_with_port_vec: &mut Vec<String>,
-    ip_re: &Regex,
     ips: &mut Vec<String>,
 ) {
     if content.contains("IP地址,端口,TLS,数据中心,地区,城市,网络延迟")
@@ -103,7 +95,7 @@ fn extract_ip_port_from_file(
         // 处理有端口的csv数据
         if tls_mode == "true" || tls_mode == "1" || tls_mode == "tls" {
             // tls的端口
-            for cap in ip_with_port_re.captures_iter(&content) {
+            for cap in IP_WITH_PORT_REGEX.captures_iter(&content) {
                 let cap_ip = cap.get(1).unwrap().as_str().to_string();
                 let cap_port = cap.get(2).unwrap().as_str().parse::<u16>().unwrap();
                 // 主要排除这些端口，因为CF常用的端口有13个(公开的)，但是还有一些非CF的端口，能通过这些端口使用CF的CDN服务，
@@ -114,7 +106,7 @@ fn extract_ip_port_from_file(
             }
         } else if tls_mode == "false" || tls_mode == "0" {
             // 非tls的端口
-            for cap in ip_with_port_re.captures_iter(&content) {
+            for cap in IP_WITH_PORT_REGEX.captures_iter(&content) {
                 let cap_ip = cap.get(1).unwrap().as_str().to_string();
                 let cap_port = cap.get(2).unwrap().as_str().parse::<u16>().unwrap();
 
@@ -124,7 +116,7 @@ fn extract_ip_port_from_file(
             }
         } else {
             // 全部端口(包括tls和非tls)，没有传入tls、tlsmode参数时，就走这里
-            for cap in ip_with_port_re.captures_iter(&content) {
+            for cap in IP_WITH_PORT_REGEX.captures_iter(&content) {
                 let cap_ip = cap.get(1).unwrap().as_str().to_string();
                 let cap_port = cap.get(2).unwrap().as_str().parse::<u16>().unwrap();
                 ip_with_port_vec.push(format!("{},{}", cap_ip, cap_port));
@@ -137,7 +129,12 @@ fn extract_ip_port_from_file(
         // 2、地址栏没有传入dport，就使用配置文件中，读取到的port
         // 3、配置文件中没有port，就使用443端口
         // 权重：url的dport端口 > 配置文件中的端口 > 443端口
-        for cap in ip_re.captures_iter(&content) {
+        for cap in IPV4_OR_IPV6_REGEX.captures_iter(&content) {
+            if let Some(ip_port) = cap.get(0) {
+                ips.push(ip_port.as_str().to_string());
+            }
+        }
+        for cap in DOMAIN_REGEX.captures_iter(&content) {
             if let Some(ip_port) = cap.get(0) {
                 ips.push(ip_port.as_str().to_string());
             }

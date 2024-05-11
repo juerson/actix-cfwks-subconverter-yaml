@@ -1,9 +1,14 @@
 mod utils;
-
 use actix_web::{get, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::fs;
-use utils::{config::yaml_config_to_json, convert::subconvert, data::read_ip_from_files};
+use utils::{config::yaml_config_to_json, convert::subconvert, data::read_ip_domain_from_files};
+
+lazy_static! {
+    static ref IP_WITH_PORT_REGEX: Regex = Regex::new(r"\b((?:[0-9]{1,3}\.){3}[0-9]{1,3}),(\d{2,5})\b|(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}),(\d{2,5})\b").unwrap();
+    static ref PROXYIES_NODE_INFO_REGEX: Regex = Regex::new(r"  - \{([^}]*(name:[^}]*)[^}]*)\}").unwrap(); // 匹配包含 "name:" 的 "- {}" 字符串
+}
 
 async fn default_route() -> impl Responder {
     HttpResponse::NotFound().body("Not found.")
@@ -22,8 +27,8 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
     // 参数
     let mut target = "".to_string();
     let mut node_count: usize = 300;
-    let mut port: u16 = 0; // 这里设置0，使用配置文件中的端口
-    let mut tls_mode: String = "".to_string(); // 选择哪些端口？0为使用非TLS的端口、1为使用TLS的端口？
+    let mut port: u16 = 0; // 这里设置0，使用配置文件中的端口，配置文件上设置的端口有错误就使用程序设置的默认端口
+    let mut tls_mode: String = "".to_string(); // 选择哪些端口？true/tls/1是选择TLS端口，false/0选择非TLS的端口，其它就不区分
     let mut select_proxy_type = "all".to_string(); // 不区分代理的类型（vles、trojan）
     let mut account_number: u8 = 0; // 选择账号，默认为第一个账号
     for (key, value) in params {
@@ -34,10 +39,9 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
             // 您想要获取多少个节点？默认300个
             node_count = value.parse::<usize>().unwrap();
         } else if key.to_lowercase() == "dport" || key.to_lowercase() == "defaultport" {
-            // 设置默认port，仅没有端口的IP使用
+            // 设置默认port，仅没有端口的IP、域名使用
             port = value.parse::<u16>().unwrap();
         } else if key.to_lowercase() == "tls" || key.to_lowercase() == "tlsmode" {
-            // true/tls/1是选择TLS端口，false/0选择非TLS的端口，其它就不区分
             tls_mode = value.to_string();
         } else if key.to_lowercase() == "proxy" || key.to_lowercase() == "proxytype" {
             // 选择那种协议的配置节点？是vless还是trojan
@@ -55,9 +59,9 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
     let json_data = yaml_config_to_json(&node_config_file);
 
     // 从本地data文件夹中读取数据
-    // non_port_vec：从文件中，读取到没有端口的IP
+    // non_port_vec：从文件中，读取到没有端口的IP、域名
     // ip_with_port_vec：从文件中，读取到有端口的IP（格式：IP,PORT）
-    let (non_port_vec, ip_with_port_vec) = match read_ip_from_files(folder_path, &tls_mode) {
+    let (non_port_vec, ip_with_port_vec) = match read_ip_domain_from_files(folder_path, &tls_mode) {
         Ok(result) => result,
         Err(err) => {
             eprintln!("Error reading IP files: {}", err);
@@ -68,11 +72,10 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
     let mut clash_proxy_name: Vec<String> = Vec::new();
     if ip_with_port_vec.len() != 0 && non_port_vec.len() == 0 {
         // 下面代码，用于处理有端口的
-        let ip_and_port_re = Regex::new(r"\b((?:[0-9]{1,3}\.){3}[0-9]{1,3}),(\d{2,5})\b|(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}),(\d{2,5})\b").unwrap();
         let ips_with_ports: Vec<String> =
             ip_with_port_vec.iter().take(node_count).cloned().collect(); // 获取前node_count个
         for ip_with_port in &ips_with_ports {
-            for cap in ip_and_port_re.captures_iter(ip_with_port) {
+            for cap in IP_WITH_PORT_REGEX.captures_iter(ip_with_port) {
                 let cap_ip = cap
                     .get(1)
                     .map_or("".to_string(), |m| m.as_str().to_string());
@@ -122,12 +125,11 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
         }
     } else if ip_with_port_vec.len() != 0 && non_port_vec.len() != 0 {
         // 下面的代码，用于处理既有端口的和没有端口的
-        let ip_and_port_re = Regex::new(r"\b((?:[0-9]{1,3}\.){3}[0-9]{1,3}),(\d{2,5})\b|(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}),(\d{2,5})\b").unwrap();
         // 获取前node_count个
         let ips_with_ports: Vec<String> =
             ip_with_port_vec.iter().take(node_count).cloned().collect();
         for ip_with_port in &ips_with_ports {
-            for cap in ip_and_port_re.captures_iter(ip_with_port) {
+            for cap in IP_WITH_PORT_REGEX.captures_iter(ip_with_port) {
                 // 分离出IP和PORT
                 let cap_ip = cap
                     .get(1)
@@ -187,8 +189,8 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
     if target == "clash" {
         match read_yaml_file("clash.yaml").await {
             Ok(content) => {
-                let proxies_node_content = content.replace("  - {name: 127.0.0.1:1080, server: 127.0.0.1, port: 1080, type: ss, cipher: aes-128-gcm, password: abc123456}", &nodes.join("\n"));
-
+                let proxies_node_content =
+                    PROXYIES_NODE_INFO_REGEX.replace_all(&content, &nodes.join("\n"));
                 let clash_config = proxies_node_content.replace(
                     "      - 127.0.0.1:1080",
                     &clash_proxy_name
@@ -222,24 +224,34 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
 async fn index(req: HttpRequest) -> impl Responder {
     let host_address = req.connection_info().host().to_owned();
     let title = format!(
-        "软件功能：将优选的IP(不是WARP的优选IP)，写入到 Cloudflare 搭建的 vless/trojan 协议的配置节点中，并转换为 v2ray、clash 订阅!\n\n"
+        "软件功能：将优选的IP(不是WARP的优选IP)或域名，写入到 Cloudflare 搭建的 vless/trojan 协议的配置节点中，并转换为 v2ray、clash 订阅!\n\n"
     );
     let web_address = format!("web服务地址：http://{}\n\n", host_address);
 
     let syntax_info = format!("订阅地址格式：http://{}/sub?target=[v2ray,clash]&nodeSize=[1..?]&proxytype=[vless,trojan]&userid=[1..255]&tls=[true,false]&dport=[80..65535]\n\n", host_address);
 
     let example1 = format!("订阅示例：\n\nhttp://{}/sub?target=v2ray\n", host_address);
-    let example2 = format!("http://{}/sub?target=clash\n",host_address);
-    let example3 = format!("http://{}/sub?target=clash&userid=1\n",host_address);
-    let example4 = format!("http://{}/sub?target=v2ray&userid=1\n",host_address);
-    let example5 = format!("http://{}/sub?target=clash&proxy=trojan\n",host_address);
-    let example6 = format!("http://{}/sub?target=clash&proxy=vless\n",host_address);
-    let example7 = format!("http://{}/sub?target=v2ray&proxy=vless&userid=3\n",host_address);
-    let example8 = format!("http://{}/sub?target=v2ray&nodesize=100\n",host_address);
-    let example9 = format!("http://{}/sub?target=v2ray&tls=true&dport=8443\n",host_address);
-    let example = format!("{}{}{}{}{}{}{}{}{}\n",example1,example2,example3,example4,example5,example6,example7,example8,example9);
-    
-    let param_introduction = format!(r#"url中的参数介绍：
+    let example2 = format!("http://{}/sub?target=clash\n", host_address);
+    let example3 = format!("http://{}/sub?target=clash&userid=1\n", host_address);
+    let example4 = format!("http://{}/sub?target=v2ray&userid=1\n", host_address);
+    let example5 = format!("http://{}/sub?target=clash&proxy=trojan\n", host_address);
+    let example6 = format!("http://{}/sub?target=clash&proxy=vless\n", host_address);
+    let example7 = format!(
+        "http://{}/sub?target=v2ray&proxy=vless&userid=3\n",
+        host_address
+    );
+    let example8 = format!("http://{}/sub?target=v2ray&nodesize=100\n", host_address);
+    let example9 = format!(
+        "http://{}/sub?target=v2ray&tls=true&dport=8443\n",
+        host_address
+    );
+    let example = format!(
+        "{}{}{}{}{}{}{}{}{}\n",
+        example1, example2, example3, example4, example5, example6, example7, example8, example9
+    );
+
+    let param_introduction = format!(
+        r#"url中的参数介绍：
 
 1、target：【必选】转换的目标客户端，只支持转换为v2ray、clash，而且是TLS+WS的；vless节点的，支持不是TLS加密的。
 2、nodesize（nodecount）：您要的节点数量，是从data目录下，读取到txt、csv文件的所有数据中，截取前n个数据来构建节点的信息。
@@ -271,7 +283,8 @@ async fn index(req: HttpRequest) -> impl Responder {
 温馨提示：
 
 使用 Cloudflare workers 搭建的 trojan 节点，转换为 clash 使用，PROXYIP 地址可能会丢失（查询不到，也不能使用它作为落脚IP），跟没有设置 PROXYIP 效果一样。
-导致一些网站无法打开，比如：ChatGPT、Cloudflare 等，但是生成的v2ray订阅，可以在v2rayN软件中正常使用，PROXYIP 的地址能查询到，而且能够正常使用 ChatGPT 等。"#);
+导致一些网站无法打开，比如：ChatGPT、Cloudflare 等，但是生成的v2ray订阅，可以在v2rayN软件中正常使用，PROXYIP 的地址能查询到，而且能够正常使用 ChatGPT 等。"#
+    );
 
     HttpResponse::Ok()
         .content_type("text/plain; charset=utf-8")
