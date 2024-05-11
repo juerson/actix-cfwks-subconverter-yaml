@@ -28,7 +28,7 @@
       Host: 您的域名.pages.dev # 修改这里
   alpn:
     - h3
-# 使用 CF Worker/Pages 搭建的 vless 节点(WS)，不是TLS加密，这个遇到过v2ray不能使用情况，但是clash能使用
+# 使用 CF Worker 搭建的 vless 节点(WS)，不是TLS加密，这个遇到过v2ray不能使用情况，但是clash能使用
 # 这个节点看成 userid=3
 - type: vless
   name: ""
