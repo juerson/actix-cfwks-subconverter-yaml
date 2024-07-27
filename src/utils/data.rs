@@ -35,11 +35,10 @@ pub fn read_ip_domain_from_files(
         let file_extension = file_path.extension().unwrap_or_default();
         // 获取文件名
         let file_name = file_path.file_name().unwrap().to_string_lossy();
-        // 排除以 "ips-v" 开头的文件，排除ip.txt的文件
+        // 排除以 "ips-v" 或 "ipv"开头的文件，排除ip.txt、locations.json的文件
         if file_name.starts_with("ips-v")
+            || (file_name.starts_with("ipv") && file_extension == "txt")
             || file_name == "ip.txt"
-            || file_name == "ipv6.txt"
-            || file_name == "ipv4.txt"
             || file_name == "locations.json"
         {
             continue;
