@@ -300,15 +300,29 @@ async fn read_yaml_file(filename: &str) -> Result<String, std::io::Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    const BIND: &str = "127.0.0.1:18085";
-    println!("Server is running on http://{}", BIND);
+	// 获取本机的私有IP地址
+    let local_ip = match local_ip_address::local_ip() {
+        Ok(ip) => ip,
+        Err(e) => {
+            eprintln!("Failed to get local IP address: {}", e);
+            return Ok(());
+        }
+    };
+    // 绑定的端口
+    let port = 18085;
+    println!(
+        "Server is running on http://{}:{} or http://127.0.0.1:{}",
+        local_ip.to_string(),
+        port,
+        port
+    );
     HttpServer::new(|| {
         App::new()
             .service(index)
             .service(subconverter)
             .default_service(actix_web::web::route().to(default_route))
     })
-    .bind(BIND)?
+    .bind(format!("0.0.0.0:{}", port))? // 监听所有 IPv4 地址
     .run()
     .await
 }
