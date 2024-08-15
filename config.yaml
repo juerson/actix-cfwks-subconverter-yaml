@@ -1,0 +1,54 @@
+# 该配置本来就是clash的节点配置
+
+# 账号1：vless+ws
+- type: vless
+  name: ""
+  server: ""
+  port: 80
+  uuid: 5be9524f-ed57-4957-9644-00be2a1e8e83 # 修改这里
+  network: ws
+  tls: false
+  udp: false
+  # servername: vless.abc.workers.dev # 修改这里
+  client-fingerprint: chrome
+  skip-cert-verify: true
+  ws-opts:
+    path: /?ed=2048 # 修改这里
+    headers:
+      Host: vless.abc.workers.dev # 修改这里
+
+# 账号2：vless+ws+tls
+- type: vless
+  name: ""
+  server: ""
+  port: 443
+  uuid: 5be9524f-ed57-4957-9644-00be2a1e8e83 # 修改这里
+  network: ws
+  tls: true
+  udp: false
+  servername: vless.pages.dev # 修改这里
+  client-fingerprint: chrome
+  skip-cert-verify: true
+  ws-opts:
+    path: /?ed=2048 # 修改这里
+    headers:
+      Host: vless.pages.dev # 修改这里
+
+# 账号3：trojan+ws+tls
+# 转换为2ray、singbox时，遇到host是workers.dev，程序会关闭tls，变成trojan+ws
+# clash核心不支持trojan+ws，只支持trojan+ws+tls
+- type: trojan
+  name: ""
+  server: ""
+  port: 443
+  password: 5be9524f-ed57-4957-9644-00be2a1e8e83 # 修改这里
+  network: ws
+  udp: false
+  sni: trojan.pages.dev # 修改这里
+  client-fingerprint: chrome
+  skip-cert-verify: true
+  ws-opts:
+    path: / # 修改这里
+    headers:
+      Host: trojan.pages.dev # 修改这里
+# 后面可以继续模仿前面的配置，添加

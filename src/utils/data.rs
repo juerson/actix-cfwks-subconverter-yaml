@@ -88,11 +88,9 @@ fn extract_ip_port_from_file(
     ip_with_port_vec: &mut Vec<String>,
     ips: &mut Vec<String>,
 ) {
-    if content.contains("IP地址,端口,TLS,数据中心,地区,城市,网络延迟")
-        || content.contains("IP地址,端口,回源端口,TLS,数据中心,地区,城市,TCP延迟(ms),速度(MB/s)")
-    {
+    if content.contains("IP地址,端口") {
         // 处理有端口的csv数据
-        if tls_mode == "true" || tls_mode == "1" || tls_mode == "tls" {
+        if tls_mode == "true" {
             // tls的端口
             for cap in IP_WITH_PORT_REGEX.captures_iter(&content) {
                 let cap_ip = cap.get(1).unwrap().as_str().to_string();
@@ -103,7 +101,7 @@ fn extract_ip_port_from_file(
                     ip_with_port_vec.push(format!("{},{}", cap_ip, cap_port));
                 }
             }
-        } else if tls_mode == "false" || tls_mode == "0" {
+        } else if tls_mode == "false" {
             // 非tls的端口
             for cap in IP_WITH_PORT_REGEX.captures_iter(&content) {
                 let cap_ip = cap.get(1).unwrap().as_str().to_string();

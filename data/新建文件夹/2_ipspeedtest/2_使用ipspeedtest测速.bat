@@ -1,1 +1,0 @@
-ipspeedtest.exe -file=ip.txt -outfile=ip.csv -port=2053 -max=200
