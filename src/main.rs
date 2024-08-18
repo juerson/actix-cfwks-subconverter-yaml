@@ -9,12 +9,41 @@ use serde_urlencoded::from_str;
 use serde_yaml::Value as YamlValue;
 use std::fs;
 
+const SPECIFICATION: &str = include_str!("../使用说明.txt");
+
 lazy_static! {
     static ref PROXYIES_NODE_INFO_REGEX: Regex = Regex::new(r"  - \{([^}]*(name:[^}]*)[^}]*)\}").unwrap(); // 匹配包含 "name:" 的 "- {}" 字符串
 }
 
 async fn default_route() -> impl Responder {
     HttpResponse::NotFound().body("Not found.")
+}
+
+#[get("/")]
+async fn index(req: HttpRequest) -> impl Responder {
+    let host_address = req.connection_info().host().to_owned();
+
+    let html_body = SPECIFICATION.replace("127.0.0.1:10111", &host_address);
+
+    // 获取当前局域网IP地址
+    let ip_address = local_ip().unwrap().to_string();
+
+    // 获取当前URL
+    let url = format!(
+        "{}://{}{}",
+        req.connection_info().scheme(),
+        req.connection_info()
+            .host()
+            .replace("127.0.0.1", &ip_address),
+        req.uri()
+    );
+
+    // 生成二维码并将html_body嵌入网页中
+    let html_content = utils::qrcode::generate_html_with_qrcode(&html_body, &url);
+
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(html_content)
 }
 
 #[get("/sub")]
@@ -219,111 +248,6 @@ async fn subconverter(req: HttpRequest) -> impl Responder {
             .content_type("text/plain; charset=utf-8")
             .body(html_body)
     }
-}
-
-#[get("/")]
-async fn index(req: HttpRequest) -> impl Responder {
-    let host_address = req.connection_info().host().to_owned();
-
-    let html_doc = format!(
-        r#"【YAML】本工具的功能：批量将优选的IP(不是WARP的优选IP)或域名，写入到 Cloudflare 搭建的 vless/trojan 协议的配置节点中，并转换为 v2ray、sing-box、clash.mate/mihomo 订阅!
-
-web服务地址：http://{host_address}
-
-订阅地址格式：http://{host_address}/sub?target=[v2ray,singbox,clash]&template=[true,false]&nodeSize=[1..?]&proxytype=[vless,trojan]&userid=[1..255]&tls=[true,false]&dport=[80..65535]
-
-订阅示例：
-
-http://{host_address}/sub?target=v2ray
-http://{host_address}/sub?target=singbox
-http://{host_address}/sub?target=clash
-——————————————————————————————
-http://{host_address}/sub?target=singbox&template=false
-
-http://{host_address}/sub?target=singbox&template=false&userid=1
-http://{host_address}/sub?target=singbox&template=false&proxy=vless
-
-http://{host_address}/sub?target=clash&template=false
-——————————————————————————————
-http://{host_address}/sub?target=v2ray&userid=1
-http://{host_address}/sub?target=singbox&userid=1
-http://{host_address}/sub?target=clash&userid=1
-——————————————————————————————
-http://{host_address}/sub?target=v2ray&proxy=vless
-http://{host_address}/sub?target=v2ray&proxy=trojan
-
-http://{host_address}/sub?target=singbox&proxy=vless
-http://{host_address}/sub?target=singbox&proxy=trojan
-
-http://{host_address}/sub?target=clash&proxy=vless
-http://{host_address}/sub?target=clash&proxy=trojan
-——————————————————————————————
-http://{host_address}/sub?target=v2ray&tls=true
-http://{host_address}/sub?target=v2ray&tls=false
-
-http://{host_address}/sub?target=singbox&tls=true
-http://{host_address}/sub?target=singbox&tls=false
-
-http://{host_address}/sub?target=clash&tls=true
-http://{host_address}/sub?target=clash&tls=false
-——————————————————————————————
-http://{host_address}/sub?target=v2ray&nodesize=500
-http://{host_address}/sub?target=singbox&nodesize=100
-http://{host_address}/sub?target=clash&nodesize=150
-——————————————————————————————
-http://{host_address}/sub?target=v2ray&dport=443
-http://{host_address}/sub?target=singbox&dport=443
-http://{host_address}/sub?target=clash&dport=2053
-
-url中的参数介绍：
-
-1、target：(必选)转换的目标客户端，可选v2ray、singbox、clash。
-2、nodesize（nodecount）：您需要的节点数量，是从data目录下，读取txt、csv文件的所有数据中，截取前n个数据来构建节点信息。
-注意： 
-    (1)如果符合要求的txt、csv文件比较多，读取到数据比较多，文件之间的数据拼接顺序跟文件名有一点关系；
-    (2)不是随机从data目录中读取到的全部数据中选择n个数据，而是按照读取到的数据先后顺序，截取前n个数据来构建节点的信息。
-    (3)v2ray默认是300个节点；sing-box默认是50个节点，最大150个节点；clash默认100个节点，最大150个节点。
-
-3、template：是否启用sing-box、clash配置模板，默认是启用的，可选true、false值。
-4、proxy（proxytype）：选择什么协议的节点？只能选择vless、trojan，这里指您在配置文件中，存放的节点类型，符合要求的，才使用它。
-5、userid：指定使用哪个clash配置信息，生成v2ray链接或sing-box、clash配置文件？它是虚构的，是根据config.yaml文件的配置，数组下标+1来计算的。
-    例如：
-        userid=1就是使用第一个节点的配置信息，2就是使用第二个节点的配置信息，以此类推。
-        userid值的范围是[0,255]，为0是随机节点的配置信息，超过配置的总个数，也是随机节点的配置信息。
-    注意：
-        (1)proxy 和 userid 两个都设置且设置不当，可能导致生成空白页面，要传入正确的值才能生成节点信息。
-           例如：proxy=vless&userid=2，配置文件中第2个节点不是vless，就不能生成节点的配置信息，导致空白页面出现。
-        (2)userid值超出[0,255]范围，程序会报错，显示"该网页无法正常运作"。
-
-6、tls（tlsmode）：用于控制使用哪些端口（包括使用哪些节点）。tls=true/1表示使用tls加密，false/0表示不使用tls加密；如果为空/不传入该参数，就不区分tls和非tls。
-7、dport（defaultport）：默认0端口，随机tls的端口。data目录下，读取到txt、csv文件的数据中，没有端口的情况，才使用这里设置的默认端口，workers.dev的host，由内部随机生成。
-    
-温馨提示：
-
-使用 Cloudflare workers 搭建的 trojan 节点，转换为 clash.mate/mihomo 订阅使用，PROXYIP 地址可能会丢失，跟没有设置 PROXYIP 效果一样，也就是不能使用它访问一些地区封锁的网站，比如：ChatGPT、Netflix 等。
-"#
-    );
-    let html_body = html_doc.replace("{host_address}", &host_address);
-
-    // 获取当前局域网IP地址
-    let ip_address = local_ip().unwrap().to_string();
-
-    // 获取当前URL
-    let url = format!(
-        "{}://{}{}",
-        req.connection_info().scheme(),
-        req.connection_info()
-            .host()
-            .replace("127.0.0.1", &ip_address),
-        req.uri()
-    );
-
-    // 生成二维码并将html_body嵌入网页中
-    let html_content = utils::qrcode::generate_html_with_qrcode(&html_body, &url);
-
-    HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(html_content)
 }
 
 #[actix_web::main]
