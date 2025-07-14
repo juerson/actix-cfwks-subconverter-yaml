@@ -1,6 +1,6 @@
 【YAML】本工具的功能：
 
-批量将优选的IP或域名，写入到 Cloudflare 搭建的 vless/trojan/ss-v2ray 协议的配置节点中，并转换为 v2ray、sing-box、clash.mate/mihomo 订阅!
+批量将优选的IP或域名，写入到 Cloudflare 搭建的 vless/trojan/ss-v2ray/vmess 协议的配置节点中，并转换为 v2ray、sing-box、clash.mate/mihomo 订阅!
 
 —————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -8,8 +8,8 @@ web服务地址：http://127.0.0.1:10111
 
 订阅地址格式：
 
-http://127.0.0.1:10111/sub?target=[v2ray,singbox,clash]&template=[true,false]&n=[1..?]&type=[vless,trojan,ss]&page=[1,?]
-                          &id=[1..255]&tls=[true,false]&dPort=[80..65535]&column=[colo,loc,region,city]&source=[数据来源的路径]
+http://127.0.0.1:10111/sub?target=[v2ray,singbox,clash]&template=[true,false]&n=[1..?]&type=[vless,trojan,ss,vmess]&page=[1,?]
+                          &id=[1..255]&tls=[true,false]&dPort=[80..65535]&column=[colo,loc,region,city]&source=[数据来源的路径]&s=[true,on,1]
 
 —————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -19,6 +19,8 @@ http://127.0.0.1:10111/sub
 http://127.0.0.1:10111/sub?target=v2ray
 http://127.0.0.1:10111/sub?target=singbox
 http://127.0.0.1:10111/sub?target=clash
+
+http://127.0.0.1:10111/sub?target=v2ray&type=ss&n=10&skip_transport=true
 ———————————————————————————————————————————————————————————————————————
 http://127.0.0.1:10111/sub?target=singbox&template=false
 http://127.0.0.1:10111/sub?target=clash&template=false
@@ -93,6 +95,7 @@ http://127.0.0.1:10111/sub?target=clash&source=???
     - vless：vless协议，默认
     - trojan：trojan协议
     - ss：ss-v2ray协议
+    - vmess: vmess-zero-ws协议
 - id/userid
     - 0，表示随机选择，有效值范围：[1,255]
 - column/columnName 只有csv中有对应的字段才生效，否则为空
@@ -102,6 +105,8 @@ http://127.0.0.1:10111/sub?target=clash&source=???
     - city，城市
 - source/dataSource
     - 指定数据源所在文件夹路径或文件路径/URL链接，默认是文件夹data的路径
+- s/skip_transport
+    - 强制将ss写入v2rayN/v2rayNG使用，丢弃一些内容，后续还要手动添加回参数
 
 特别说明：
 
