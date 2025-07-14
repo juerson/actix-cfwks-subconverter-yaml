@@ -1,6 +1,6 @@
 # 该配置本来就是clash的节点配置
 
-proxies:
+# proxies:
   # id 1
   - name: vless-ws
     server: ""
@@ -68,7 +68,7 @@ proxies:
       mux: false
 
   # id 5
-  - name: shadowsocks-v2ray_plugin-TLS
+  - name: shadowsocks-v2ray_plugin-ws
     server: ""
     port: 443
     type: ss
@@ -78,10 +78,46 @@ proxies:
     plugin: v2ray-plugin
     plugin-opts:
       mode: websocket
-      path: /127.0.0.1-443                          # 修改这里-PROXYIP（格式：/IP-端口、/PROXYIP/SSSIG)
-      host: ss-v2ray.pages.dev                      # 修改这里
+      path: /127.0.0.1-443                          # 修改这里
+      host: ss-v2ray-tls.pages.dev                      # 修改这里
       tls: true                                     # 选择性修改这里，确定是否开启TLS，使用什么端口
       mux: false
+
+  # id 6
+  - name: vmess-zero-ws-nTLS
+    port: 80
+    server: ""
+    type: vmess
+    uuid: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa      # 修改这里
+    alterId: 0                                      # 这个不要自作聪明修改它，服务端不支持，会导致节点无法使用
+    cipher: zero
+    udp: false
+    tls: false                                      # 不是TLS的，一定要关闭它，其它字段不要删除
+    skip-cert-verify: true
+    servername: vmess-zero.username.workers.dev     # 修改这里，"priority over wss host"
+    network: ws
+    ws-opts:
+      path: /                                       # 修改这里
+      headers:
+        Host: vmess-zero.username.workers.dev       # 修改这里
+
+  # id 7
+  - name: vmess-zero-ws-TLS
+    port: 443
+    server: ""
+    type: vmess
+    uuid: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa      # 修改这里
+    alterId: 0                                      # 这个不要自作聪明修改它，服务端不支持，会导致节点无法使用
+    cipher: zero
+    udp: false
+    tls: true                                       # TLS的，一定要开启它
+    skip-cert-verify: true
+    servername: vmess-zero.username.workers.dev     # 修改这里
+    network: ws
+    ws-opts:
+      path: /                                       # 修改这里
+      headers:
+        Host: vmess-zero.username.workers.dev       # 修改这里
 
 # 后面可以继续模仿前面的配置添加
 # 注意：同一个脚本，在这里推荐写一个，如果同脚本配置多个节点，使用singbox、clash会导致所有的节点无法使用，需要等待一段时间后，才能使用。
