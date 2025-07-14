@@ -5,7 +5,7 @@ pub fn build_clash_yaml(
     yaml_value: &mut YamlValue,
     remarks: String,
     server_address: String,
-    server_port: u16
+    server_port: u16,
 ) -> &mut YamlValue {
     if let YamlValue::Mapping(map) = yaml_value {
         if let Some(name_value) = map.get_mut("name") {
@@ -17,6 +17,7 @@ pub fn build_clash_yaml(
         if let Some(port_value) = map.get_mut("port") {
             *port_value = YamlValue::Number(server_port.into());
         }
+        map.remove(&YamlValue::String("id".into())); // 移除读取配置时私自添加的字段
     }
     yaml_value
 }
