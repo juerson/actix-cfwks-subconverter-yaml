@@ -61,8 +61,7 @@
     plugin: v2ray-plugin
     plugin-opts:
       mode: websocket
-      # path: /127.0.0.1-443/SSSIG_value            # 修改这里-PROXYIP（格式：/IP-端口、/PROXYIP/SSSIG)
-      path: /127.0.0.1-443                          # 修改这里-PROXYIP（格式：/IP-端口、/PROXYIP/SSSIG)
+      path: /127.0.0.1-443                          # 修改这里
       host: ss-v2ray.pages.dev                      # 修改这里
       tls: false                                    # 选择性修改这里，确定是否开启TLS，使用什么端口
       mux: false
@@ -79,7 +78,7 @@
     plugin-opts:
       mode: websocket
       path: /127.0.0.1-443                          # 修改这里
-      host: ss-v2ray-tls.pages.dev                      # 修改这里
+      host: ss-v2ray-tls.pages.dev                  # 修改这里
       tls: true                                     # 选择性修改这里，确定是否开启TLS，使用什么端口
       mux: false
 
