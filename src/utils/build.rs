@@ -121,6 +121,7 @@ pub fn sorting_data_and_build_subscribe(
                     uri_params.proxy_type.clone(),
                     uri_params.tls_mode.clone(),
                     uri_params.userid.clone(),
+                    uri_params.skip_transport.clone(),
                     &HTTP_PORTS,
                     &HTTPS_PORTS,
                 );
@@ -199,7 +200,6 @@ fn build_full_subscribe(
             match enable_template {
                 true => {
                     let content = std::fs::read_to_string(singbox_template).unwrap();
-                    // 读取模板文件以及解析为JSON
                     let singbox_json: JsonValue =
                         serde_json::from_str(&content).unwrap_or_default();
                     // 运用插入/retain()等操作修改模板文件的内容
