@@ -1,12 +1,12 @@
 mod utils;
 
-use actix_web::{ get, web, App, HttpRequest, HttpResponse, HttpServer, Responder };
-use clap::{ error::ErrorKind, CommandFactory, Parser };
+use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use clap::{error::ErrorKind, CommandFactory, Parser};
 use lazy_static::lazy_static;
 use local_ip_address::local_ip;
 use serde_urlencoded::from_str;
 use serde_yaml::Value as YamlValue;
-use utils::{ build, config, qrcode };
+use utils::{build, config, qrcode};
 
 const SPECIFICATION: &str = include_str!("../使用说明.txt");
 
@@ -40,6 +40,7 @@ pub struct Params {
     pub tls_mode: String,
     pub data_source: String,
     pub page: usize,
+    pub skip_transport: bool,
 }
 
 lazy_static! {
@@ -65,14 +66,18 @@ async fn index(req: HttpRequest) -> impl Responder {
     let url = format!(
         "{}://{}{}",
         req.connection_info().scheme(),
-        req.connection_info().host().replace("127.0.0.1", &ip_address),
+        req.connection_info()
+            .host()
+            .replace("127.0.0.1", &ip_address),
         req.uri()
     );
 
     // 生成二维码并将html_body嵌入网页中
     let html_content = qrcode::generate_html_with_qrcode(&html_body, &url);
 
-    HttpResponse::Ok().content_type("text/html; charset=utf-8").body(html_content)
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(html_content)
 }
 
 #[get("/sub")]
@@ -82,15 +87,16 @@ async fn subconverter(req: HttpRequest, data: web::Data<AppState>) -> impl Respo
 
     let mut uri_params = Params {
         target: data.args.target.to_string(), // 由cli参数中传递进来，默认转换为v2ray，可以在订阅链接中修改
-        node_count: 300, // 节点数量，这里默认300，实际不一定是这个数字
+        node_count: 300,                      // 节点数量，这里默认300，实际不一定是这个数字
         default_port: 0, // 默认端口，没有在数据文件读取到端口才启用它，0为随机端口
-        userid: 0, // 选择yaml中哪个节点配置（index）
+        userid: 0,       // 选择yaml中哪个节点配置（index）
         column_name: "colo".to_string(), // 使用哪个列名的字段值为节点的前缀？可选：[colo,loc,region,city]
-        template: true, // 是否使用模板文件，默认使用
-        proxy_type: "all".to_string(), // 不区分代理的类型（vles、trojan）
+        template: true,                  // 是否使用模板文件，默认使用
+        proxy_type: "all".to_string(),   // 不区分代理的类型（vles、trojan）
         tls_mode: "all".to_string(), // 选择哪些端口？true/1是选择TLS端口，false/0选择非TLS的端口，其它就不区分
         data_source: "./data".to_string(), // 默认数据文件路径
         page: 1,
+        skip_transport: false, // 只针对ss转换为v2rayN、v2rayNG用的（target=v2ray&type=ss&n=10&skip_transport=true）
     };
 
     // 获取url的参数
@@ -129,6 +135,11 @@ async fn subconverter(req: HttpRequest, data: web::Data<AppState>) -> impl Respo
                 }
                 _ => {}
             }
+        } else if vec!["s", "skip_transport"].contains(&key.to_lowercase().as_str()) {
+            // 强制将含有v2ray插件的ss的协议写入v2rayN、v2rayNG，还需要在客户端上添加对应的transport参数
+            if vec!["1", "true", "on"].contains(&value.to_string().to_lowercase().as_str()) {
+                uri_params.skip_transport = true;
+            }
         }
     }
 
@@ -139,10 +150,12 @@ async fn subconverter(req: HttpRequest, data: web::Data<AppState>) -> impl Respo
         proxies_value,
         uri_params.clone(),
         &CLASH_TEMPLATE,
-        &SINGBOX_TEMPLATE
+        &SINGBOX_TEMPLATE,
     );
 
-    HttpResponse::Ok().content_type("text/plain; charset=utf-8").body(html_body)
+    HttpResponse::Ok()
+        .content_type("text/plain; charset=utf-8")
+        .body(html_body)
 }
 
 #[actix_web::main]
@@ -176,13 +189,12 @@ async fn main() -> std::io::Result<()> {
                     .service(subconverter)
                     .default_service(actix_web::web::route().to(default_route))
             })
-                .bind(format!("0.0.0.0:{}", port))?
-                .run().await;
+            .bind(format!("0.0.0.0:{}", port))?
+            .run()
+            .await;
         }
         Err(e) => {
-            if
-                e.kind() == ErrorKind::MissingRequiredArgument ||
-                e.kind() == ErrorKind::InvalidValue
+            if e.kind() == ErrorKind::MissingRequiredArgument || e.kind() == ErrorKind::InvalidValue
             {
                 // 如果是因为缺少必需参数或无效值导致的错误，则显示帮助信息
                 Args::command().print_help().unwrap();
