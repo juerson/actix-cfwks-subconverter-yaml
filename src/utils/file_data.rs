@@ -266,7 +266,7 @@ pub fn process_files_data(
     let mut seen_addr: Vec<String> = Vec::new(); // 数据去重
 
     let path = Path::new(target_path);
-    if path.is_file() && path.extension().map_or(false, |ext| (ext == "txt" || ext == "csv")) {
+    if path.is_file() && path.extension().map_or(false, |ext| ext == "txt" || ext == "csv") {
         // 如果路径是 TXT 或 CSV 文件，直接处理该文件
         match process_file(target_path, default_port) {
             Ok(data) => {
@@ -318,7 +318,7 @@ pub fn process_files_data(
 
             let is_txt_or_csv = path
                 .extension()
-                .map_or(false, |ext| (ext == "txt" || ext == "csv"));
+                .map_or(false, |ext| ext == "txt" || ext == "csv");
 
             // 只处理txt和csv文件，process_file函数中，含有排除的txt文件
             if path.is_file() && is_txt_or_csv {
