@@ -69,9 +69,9 @@ fn build_vless_link(
     let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
         .and_then(|v| v.as_str())
         .unwrap_or("chrome");
-    let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+    // let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
+    //     .and_then(|v| v.as_bool())
+    //     .unwrap_or(true);
 
     let tls_boolean = get_yaml_value(&yaml_value, &"tls")
         .and_then(|v| v.as_bool())
@@ -81,10 +81,10 @@ fn build_vless_link(
         true => "tls",
         false => "none",
     };
-    let skip_cert_verify = match skip_cert_verify_bool {
-        true => "1",
-        false => "",
-    };
+    // let skip_cert_verify = match skip_cert_verify_bool {
+    //     true => "1",
+    //     false => "",
+    // };
 
     let mut params = BTreeMap::new();
     params.insert("encryption", "none");
@@ -93,7 +93,7 @@ fn build_vless_link(
     params.insert("host", &host);
     params.insert("sni", &sni);
     params.insert("fp", &client_fingerprint);
-    params.insert("allowInsecure", skip_cert_verify);
+    // params.insert("allowInsecure", skip_cert_verify);
     params.insert("path", &path);
 
     // 过滤掉值为空的键值对，然后将数据结构序列化为Query String格式的字符串
@@ -189,18 +189,18 @@ fn build_trojan_linnk(
     let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
         .and_then(|v| v.as_str())
         .unwrap_or("chrome");
-    let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+    // let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
+    //     .and_then(|v| v.as_bool())
+    //     .unwrap_or(true);
 
     let security = match host.ends_with("workers.dev") {
         true => "none",
         false => "tls",
     };
-    let skip_cert_verify = match skip_cert_verify_bool {
-        true => "1",
-        false => "",
-    };
+    // let skip_cert_verify = match skip_cert_verify_bool {
+    //     true => "1",
+    //     false => "",
+    // };
 
     // 构建节点链接后面的参数
     let mut params = BTreeMap::new();
@@ -209,7 +209,7 @@ fn build_trojan_linnk(
     params.insert("fp", &client_fingerprint);
     params.insert("type", &network);
     params.insert("host", &host);
-    params.insert("allowInsecure", skip_cert_verify);
+    // params.insert("allowInsecure", skip_cert_verify);
     params.insert("path", &path);
 
     // 过滤掉值为空的键值对，然后将数据结构序列化为Query String格式的字符串
