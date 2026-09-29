@@ -4,7 +4,6 @@ use super::{
     net_data,
 };
 use crate::Params;
-
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_json::{json, Value as JsonValue};
@@ -121,7 +120,6 @@ pub fn sorting_data_and_build_subscribe(
                     uri_params.proxy_type.clone(),
                     uri_params.tls_mode.clone(),
                     uri_params.userid.clone(),
-                    uri_params.skip_transport.clone(),
                     &HTTP_PORTS,
                     &HTTPS_PORTS,
                 );
