@@ -1,0 +1,1 @@
+cfst.exe -f ip.txt -tp 443 -o result.csv -dd -httping -cfcolo SJC,SIN

@@ -1,0 +1,1 @@
+ipspeedtest.exe -file ip.txt
