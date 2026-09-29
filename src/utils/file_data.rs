@@ -52,7 +52,7 @@ pub fn create_field_map() -> HashMap<&'static str, Vec<&'static str>> {
     let mut field_map: HashMap<&str, Vec<&str>> = HashMap::new();
     field_map.insert("addr", vec!["IP", "IP地址", "IP 地址", "网络地址"]);
     field_map.insert("port", vec!["PORT", "端口"]);
-    field_map.insert("colo", vec!["colo", "iata", "数据中心"]);
+    field_map.insert("colo", vec!["colo", "iata", "数据中心", "地区码"]);
     field_map.insert("loc", vec!["cca2", "alpha-2", "Country Code", "CountryCode", "国家代码"]);
     field_map.insert("region", vec!["region", "区域", "地区"]);
     field_map.insert("city", vec!["city", "城市"]);
