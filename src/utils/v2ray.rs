@@ -143,20 +143,22 @@ fn build_vmess_link(
     };
 
     let vmess = json!({
-        "ps": remarks,
-        "v": "2",
-        "add": server_address,
-        "port": server_port,
-        "id": uuid,
-        "aid": alter_id,
-        "scy": cipher,
-        "net": network,
-        "type": "none",
-        "host": servername,
-        "path": path,
-        "tls": tls,
-        "sni": host,
-        "alpn": client_fingerprint});
+    "ps": remarks,
+    "v": "2",
+    "add": server_address,
+    "port": server_port,
+    "id": uuid,
+    "aid": alter_id,
+    "scy": cipher,
+    "net": network,
+    "type": "none",
+    "host": servername,
+    "path": path,
+    "tls": tls,
+    "sni": host,
+    "fp": client_fingerprint,
+    "alpn": ""
+    });
 
     format!("vmess://{}", URL_SAFE.encode(vmess.to_string()))
 }
