@@ -9,7 +9,7 @@ web服务地址：http://127.0.0.1:10111
 订阅地址格式：
 
 http://127.0.0.1:10111/sub?target=[v2ray,singbox,clash]&template=[true,false]&n=[1..?]&type=[vless,trojan,ss,vmess]&page=[1,?]
-                          &id=[1..255]&tls=[true,false]&dPort=[80..65535]&column=[colo,loc,region,city]&source=[数据来源的路径]&s=[true,on,1]
+                          &id=[1..255]&tls=[true,false]&dPort=[80..65535]&column=[colo,loc,region,city]&source=[数据来源的路径]
 
 —————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -20,7 +20,7 @@ http://127.0.0.1:10111/sub?target=v2ray
 http://127.0.0.1:10111/sub?target=singbox
 http://127.0.0.1:10111/sub?target=clash
 
-http://127.0.0.1:10111/sub?target=v2ray&type=ss&n=10&skip_transport=true
+http://127.0.0.1:10111/sub?target=v2ray&type=ss&n=10
 ———————————————————————————————————————————————————————————————————————
 http://127.0.0.1:10111/sub?target=singbox&template=false
 http://127.0.0.1:10111/sub?target=clash&template=false
@@ -105,8 +105,6 @@ http://127.0.0.1:10111/sub?target=clash&source=???
     - city，城市
 - source/dataSource
     - 指定数据源所在文件夹路径或文件路径/URL链接，默认是文件夹data的路径
-- s/skip_transport
-    - 强制将ss写入v2rayN/v2rayNG使用，丢弃一些内容，后续还要手动添加回参数
 
 特别说明：
 
