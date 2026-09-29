@@ -1,4 +1,5 @@
 use super::config::{get_yaml_value, get_yaml_value_with_fallback};
+use super::format_ip;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use serde_json::json;
 use serde_qs as qs;
@@ -11,7 +12,6 @@ pub fn build_v2ray_links(
     remarks: String,
     server_address: String,
     server_port: u16,
-    skip_ss_transport: bool, // 跳过添加ss协议的transport(底层传输协议)，后续客户端中手动添加
 ) -> (String, String) {
     match proxy_type {
         "vless" => {
@@ -30,13 +30,7 @@ pub fn build_v2ray_links(
             return (remarks, trojan_link);
         }
         "ss" => {
-            let ss_link = build_ss_link(
-                yaml_value,
-                remarks.clone(),
-                server_address,
-                server_port,
-                skip_ss_transport,
-            );
+            let ss_link = build_ss_link(yaml_value, remarks.clone(), server_address, server_port);
             return (remarks, ss_link);
         }
         _ => {}
@@ -100,7 +94,10 @@ fn build_vless_link(
     let all_params_str = serialize_to_query_string(params);
     let encoding_remarks = urlencoding::encode(remarks.as_str());
 
-    format!("vless://{uuid}@{server_address}:{server_port}/?{all_params_str}#{encoding_remarks}")
+    format!(
+        "vless://{uuid}@{}:{server_port}/?{all_params_str}#{encoding_remarks}",
+        format_ip(&server_address)
+    )
 }
 
 fn build_vmess_link(
@@ -189,18 +186,11 @@ fn build_trojan_linnk(
     let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
         .and_then(|v| v.as_str())
         .unwrap_or("chrome");
-    // let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
-    //     .and_then(|v| v.as_bool())
-    //     .unwrap_or(true);
 
     let security = match host.ends_with("workers.dev") {
         true => "none",
         false => "tls",
     };
-    // let skip_cert_verify = match skip_cert_verify_bool {
-    //     true => "1",
-    //     false => "",
-    // };
 
     // 构建节点链接后面的参数
     let mut params = BTreeMap::new();
@@ -217,7 +207,8 @@ fn build_trojan_linnk(
     let encoding_remarks = urlencoding::encode(&remarks);
 
     format!(
-        "trojan://{password}@{server_address}:{server_port}/?{all_params_str}#{encoding_remarks}"
+        "trojan://{password}@{}:{server_port}/?{all_params_str}#{encoding_remarks}",
+        format_ip(&server_address)
     )
 }
 
@@ -226,7 +217,6 @@ fn build_ss_link(
     remarks: String,
     server_address: String,
     server_port: u16,
-    skip_ss_transport: bool,
 ) -> String {
     let cipher = get_yaml_value(&yaml_value, &"cipher")
         .and_then(|v| v.as_str())
@@ -268,18 +258,11 @@ fn build_ss_link(
         format!("{plugin};{tls}mux={mux};mode={mode};path={path};host={host}").replace("=", "%3D");
     let base64_encoded = URL_SAFE.encode(format!("{}:{}", cipher, password));
     let encoding_remarks = urlencoding::encode(&remarks);
-    if skip_ss_transport {
-        /*
-        半成品分享链接，用于v2rayN和v2rayNG，还需要在对应的客户端手动添加下面参数（也是config.yaml中的配置参数）：
-        1、传输协议(network)：ws、
-        2、伪装域名：自定义域名或pages.dev域名
-        3、路径(path): 添写path内容
-        4、传输层安全(TLS)：tls
-        */
-        format!("ss://{base64_encoded}@{server_address}:{server_port}#{encoding_remarks}")
-    } else {
-        format!("ss://{base64_encoded}@{server_address}:{server_port}?plugin={plugin_value}#{encoding_remarks}")
-    }
+
+    format!(
+        "ss://{base64_encoded}@{}:{server_port}?plugin={plugin_value}#{encoding_remarks}",
+        format_ip(&server_address)
+    )
 }
 
 fn serialize_to_query_string(params: BTreeMap<&str, &str>) -> String {
