@@ -1,4 +1,5 @@
 use super::config::{get_yaml_value, get_yaml_value_with_fallback};
+use super::format_ip;
 use super::{clash, singbox, v2ray};
 use rand::prelude::IndexedRandom;
 use serde_yaml::Value as YamlValue;
@@ -12,7 +13,6 @@ pub fn subconvert(
     uri_proxy_type: String,
     uri_tls_mode: String,
     uri_userid: u8,
-    skip_transport: bool,
     http_ports: &[u16; 7],
     https_ports: &[u16; 6],
 ) -> (String, String) {
@@ -87,22 +87,15 @@ pub fn subconvert(
             } else if node_tls == "false" && port == 0 {
                 port = *random_http_port;
             }
-
-            let mut remarks = format!("【{}】{}{}:{}", id, csv_remarks, csv_addr.clone(), port);
+            let formatted_addr = format_ip(&csv_addr);
+            let mut remarks = format!("【{}】{}{}:{}", id, csv_remarks, formatted_addr, port);
             match uri_target.as_str() {
                 "v2ray" => {
-                    // 是否将ss节点添加到v2rayN中使用，需要就只写别名、地址、端口、密码和加密方式，其它需要自己手动补充
-                    let mut skip_ss_transport = false;
-                    if uri_proxy_type == "ss"
-                        && node_type == "ss"
-                        && node_tls == "true"
-                        && skip_transport
-                    {
+                    if uri_proxy_type == "ss" && node_type == "ss" && node_tls == "true" {
                         let host = get_yaml_value(&choose_item, &"plugin-opts.host")
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
                         remarks = format!("❓{}", host);
-                        skip_ss_transport = true;
                     }
                     let (remarks_name, link) = v2ray::build_v2ray_links(
                         &node_type,
@@ -110,7 +103,6 @@ pub fn subconvert(
                         remarks,
                         csv_addr,
                         port,
-                        skip_ss_transport,
                     );
                     if !remarks_name.is_empty() {
                         return (remarks_name, link);
