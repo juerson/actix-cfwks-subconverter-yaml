@@ -1,1 +1,0 @@
-CloudflareST.exe -f ips-v4.txt -tp 443 -o result.csv -dd

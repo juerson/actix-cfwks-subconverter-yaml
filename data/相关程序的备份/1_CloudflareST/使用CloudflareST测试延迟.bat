@@ -1,1 +1,0 @@
-CloudflareST.exe -f ipv4.txt -tp 443 -o result.csv -dd
