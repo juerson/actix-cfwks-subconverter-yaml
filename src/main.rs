@@ -40,7 +40,6 @@ pub struct Params {
     pub tls_mode: String,
     pub data_source: String,
     pub page: usize,
-    pub skip_transport: bool,
 }
 
 lazy_static! {
@@ -96,7 +95,6 @@ async fn subconverter(req: HttpRequest, data: web::Data<AppState>) -> impl Respo
         tls_mode: "all".to_string(), // 选择哪些端口？true/1是选择TLS端口，false/0选择非TLS的端口，其它就不区分
         data_source: "./data".to_string(), // 默认数据文件路径
         page: 1,
-        skip_transport: false, // 只针对ss转换为v2rayN、v2rayNG用的（target=v2ray&type=ss&n=10&skip_transport=true）
     };
 
     // 获取url的参数
@@ -134,11 +132,6 @@ async fn subconverter(req: HttpRequest, data: web::Data<AppState>) -> impl Respo
                     uri_params.tls_mode = "false".to_string();
                 }
                 _ => {}
-            }
-        } else if vec!["s", "skip_transport"].contains(&key.to_lowercase().as_str()) {
-            // 强制将含有v2ray插件的ss的协议写入v2rayN、v2rayNG，还需要在客户端上添加对应的transport参数
-            if vec!["1", "true", "on"].contains(&value.to_string().to_lowercase().as_str()) {
-                uri_params.skip_transport = true;
             }
         }
     }
