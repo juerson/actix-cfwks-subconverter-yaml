@@ -1,4 +1,4 @@
-use super::config::{get_yaml_value, get_yaml_value_with_fallback};
+use super::config::{get_alpn_yaml_value, get_yaml_value, get_yaml_value_with_fallback};
 use super::format_ip;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use serde_json::json;
@@ -51,44 +51,57 @@ fn build_vless_link(
     let network = get_yaml_value(&yaml_value, &"network")
         .and_then(|v| v.as_str())
         .unwrap_or("ws");
+    let xhttp_mode = get_yaml_value(&yaml_value, &"xhttp-opts.mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     let sni = get_yaml_value_with_fallback(&yaml_value, &["sni", "servername"]).unwrap_or_default();
-    let host = get_yaml_value(&yaml_value, &"ws-opts.headers.Host")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
+    let host =
+        get_yaml_value_with_fallback(&yaml_value, &["ws-opts.headers.Host", "xhttp-opts.host"])
+            .unwrap_or("");
 
-    let path = get_yaml_value(&yaml_value, &"ws-opts.path")
-        .and_then(|v| v.as_str())
+    let path = get_yaml_value_with_fallback(&yaml_value, &["ws-opts.path", "xhttp-opts.path"])
         .unwrap_or("/");
-    let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
-        .and_then(|v| v.as_str())
-        .unwrap_or("chrome");
-    // let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
-    //     .and_then(|v| v.as_bool())
-    //     .unwrap_or(true);
 
     let tls_boolean = get_yaml_value(&yaml_value, &"tls")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-
     let security = match tls_boolean {
         true => "tls",
         false => "none",
     };
-    // let skip_cert_verify = match skip_cert_verify_bool {
+
+    let fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
+        .and_then(|v| v.as_str())
+        .unwrap_or("chrome");
+
+    let default_alpn = match network {
+        "xhttp" => vec!["h3".to_string(), "h2".to_string()],
+        _ => vec!["".to_string()],
+    };
+    let alpn = get_alpn_yaml_value(&yaml_value)
+        .unwrap_or_else(|| default_alpn)
+        .join(",");
+
+    // let skip_cert_verify_bool = get_yaml_value(&yaml_value, &"skip-cert-verify")
+    //     .and_then(|v| v.as_bool())
+    //     .unwrap_or(true);
+    // let allow_insecure = match skip_cert_verify_bool {
     //     true => "1",
-    //     false => "",
+    //     false => "0",
     // };
 
     let mut params = BTreeMap::new();
     params.insert("encryption", "none");
     params.insert("security", &security);
     params.insert("type", &network);
+    params.insert("mode", xhttp_mode);
     params.insert("host", &host);
-    params.insert("sni", &sni);
-    params.insert("fp", &client_fingerprint);
-    // params.insert("allowInsecure", skip_cert_verify);
     params.insert("path", &path);
+    params.insert("sni", &sni);
+    params.insert("fp", &fingerprint);
+    params.insert("alpn", &alpn);
+    // params.insert("allowInsecure", allow_insecure);
 
     // 过滤掉值为空的键值对，然后将数据结构序列化为Query String格式的字符串
     let all_params_str = serialize_to_query_string(params);
@@ -110,54 +123,67 @@ fn build_vmess_link(
         .and_then(|v| v.as_str())
         .unwrap_or("00000000-0000-0000-0000-000000000000");
 
-    let cipher = get_yaml_value(&yaml_value, &"cipher")
-        .and_then(|v| v.as_str())
-        .unwrap_or("zero");
     let alter_id = get_yaml_value(&yaml_value, &"alterId")
         .and_then(|v| v.as_i64())
         .unwrap_or(0);
-
-    let tls_boolean = get_yaml_value(&yaml_value, &"tls")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    let servername = get_yaml_value_with_fallback(&yaml_value, &["servername"]).unwrap_or_default(); // priority over wss host
-    let host = get_yaml_value(&yaml_value, &"ws-opts.headers.Host")
+    let security = get_yaml_value(&yaml_value, &"cipher")
         .and_then(|v| v.as_str())
-        .unwrap_or_default();
+        .unwrap_or("zero");
 
     let network = get_yaml_value(&yaml_value, &"network")
         .and_then(|v| v.as_str())
         .unwrap_or("ws");
-
-    let path = get_yaml_value(&yaml_value, &"ws-opts.path")
+    let type_value = get_yaml_value(&yaml_value, &"xhttp-opts.mode")
         .and_then(|v| v.as_str())
+        .unwrap_or("none");
+
+    let servername = get_yaml_value_with_fallback(&yaml_value, &["servername"]).unwrap_or_default(); // priority over wss host
+    let host =
+        get_yaml_value_with_fallback(&yaml_value, &["ws-opts.headers.Host", "xhttp-opts.host"])
+            .unwrap_or("");
+
+    let path = get_yaml_value_with_fallback(&yaml_value, &["ws-opts.path", "xhttp-opts.path"])
         .unwrap_or("/");
-    let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
-        .and_then(|v| v.as_str())
-        .unwrap_or("chrome");
 
+    let tls_boolean = get_yaml_value(&yaml_value, &"tls")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let tls = match tls_boolean {
         true => "tls",
         false => "",
     };
 
+    let fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
+        .and_then(|v| v.as_str())
+        .unwrap_or("chrome");
+
+    let default_alpn = match network {
+        "xhttp" => vec!["h3".to_string(), "h2".to_string()],
+        _ => vec!["".to_string()],
+    };
+    let alpn = get_alpn_yaml_value(&yaml_value)
+        .unwrap_or_else(|| default_alpn)
+        .join(",");
+
     let vmess = json!({
-    "ps": remarks,
-    "v": "2",
-    "add": server_address,
-    "port": server_port,
-    "id": uuid,
-    "aid": alter_id,
-    "scy": cipher,
-    "net": network,
-    "type": "none",
-    "host": servername,
-    "path": path,
-    "tls": tls,
-    "sni": host,
-    "fp": client_fingerprint,
-    "alpn": ""
+        "v": "2",
+        "ps": remarks,
+        "add": server_address,
+        "port": server_port,
+        "id": uuid,
+        "aid": alter_id,
+        "scy": security,
+        "net": network,
+        "type": type_value,
+        "host": servername,
+        "path": path,
+        "tls": tls,
+        "sni": host,
+        "alpn": alpn,
+        "fp": fingerprint,
+        "insecure": "0",
+        "vcn": "",
+        "pcs": "",
     });
 
     format!("vmess://{}", URL_SAFE.encode(vmess.to_string()))
@@ -169,40 +195,59 @@ fn build_trojan_linnk(
     server_address: String,
     server_port: u16,
 ) -> String {
+    // 密码
     let password = get_yaml_value(&yaml_value, &"password")
         .and_then(|v| v.as_str())
         .unwrap_or_default();
 
+    // 传输协议：websocket
     let network = get_yaml_value(&yaml_value, &"network")
         .and_then(|v| v.as_str())
         .unwrap_or("ws");
+    let xhttp_mode = get_yaml_value(&yaml_value, &"xhttp-opts.mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
+    // host和sni
     let sni = get_yaml_value_with_fallback(&yaml_value, &["sni", "servername"]).unwrap_or_default();
-    let host = get_yaml_value(&yaml_value, &"ws-opts.headers.Host")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
+    let host =
+        get_yaml_value_with_fallback(&yaml_value, &["ws-opts.headers.Host", "xhttp-opts.host"])
+            .unwrap_or("");
 
-    let path = get_yaml_value(&yaml_value, &"ws-opts.path")
-        .and_then(|v| v.as_str())
+    // 路径
+    let path = get_yaml_value_with_fallback(&yaml_value, &["ws-opts.path", "xhttp-opts.path"])
         .unwrap_or("/");
-    let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
-        .and_then(|v| v.as_str())
-        .unwrap_or("chrome");
 
+    // 是否数据保护：none、tls
     let security = match host.ends_with("workers.dev") {
         true => "none",
         false => "tls",
     };
 
+    // 指纹
+    let fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
+        .and_then(|v| v.as_str())
+        .unwrap_or("chrome");
+
+    let default_alpn = match network {
+        "xhttp" => vec!["h3".to_string(), "h2".to_string()],
+        _ => vec!["".to_string()],
+    };
+    let alpn = get_alpn_yaml_value(&yaml_value)
+        .unwrap_or_else(|| default_alpn)
+        .join(",");
+
     // 构建节点链接后面的参数
     let mut params = BTreeMap::new();
     params.insert("security", security);
-    params.insert("sni", &sni);
-    params.insert("fp", &client_fingerprint);
     params.insert("type", &network);
+    params.insert("mode", xhttp_mode);
     params.insert("host", &host);
-    // params.insert("allowInsecure", skip_cert_verify);
     params.insert("path", &path);
+    params.insert("sni", &sni);
+    params.insert("fp", &fingerprint);
+    params.insert("alpn", &alpn);
+    // params.insert("allowInsecure", skip_cert_verify);
 
     // 过滤掉值为空的键值对，然后将数据结构序列化为Query String格式的字符串
     let all_params_str = serialize_to_query_string(params);
@@ -220,10 +265,10 @@ fn build_ss_link(
     server_address: String,
     server_port: u16,
 ) -> String {
-    let cipher = get_yaml_value(&yaml_value, &"cipher")
+    let password = get_yaml_value(&yaml_value, &"password")
         .and_then(|v| v.as_str())
         .unwrap_or("none");
-    let password = get_yaml_value(&yaml_value, &"password")
+    let encryption = get_yaml_value(&yaml_value, &"cipher")
         .and_then(|v| v.as_str())
         .unwrap_or("none");
 
@@ -243,22 +288,21 @@ fn build_ss_link(
     let tls_boolean = get_yaml_value(&yaml_value, &"plugin-opts.tls")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let mux_boolean = get_yaml_value(&yaml_value, &"plugin-opts.mux")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
     let tls = match tls_boolean {
         true => "tls;",
         false => "",
     };
+    let mux_boolean = get_yaml_value(&yaml_value, &"plugin-opts.mux")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let mux = match mux_boolean {
         true => "1",
         false => "0",
     };
 
+    let base64_encoded = URL_SAFE.encode(format!("{}:{}", encryption, password));
     let plugin_value =
         format!("{plugin};{tls}mux={mux};mode={mode};path={path};host={host}").replace("=", "%3D");
-    let base64_encoded = URL_SAFE.encode(format!("{}:{}", cipher, password));
     let encoding_remarks = urlencoding::encode(&remarks);
 
     format!(

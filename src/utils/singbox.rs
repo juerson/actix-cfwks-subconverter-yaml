@@ -46,29 +46,49 @@ fn build_vless_singbox_config(
         .and_then(|v| v.as_str())
         .unwrap_or("00000000-0000-0000-0000-000000000000");
 
-    let network = get_yaml_value(&yaml_value, &"network")
-        .and_then(|v| v.as_str())
-        .unwrap_or("ws");
-
     let tls = get_yaml_value(&yaml_value, &"tls")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
     let servername =
         get_yaml_value_with_fallback(&yaml_value, &["servername", "sni"]).unwrap_or_default();
-    let host = get_yaml_value(&yaml_value, &"ws-opts.headers.Host")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
+    let host =
+        get_yaml_value_with_fallback(&yaml_value, &["ws-opts.headers.Host", "xhttp-opts.host"])
+            .unwrap_or("");
 
-    let path = get_yaml_value(&yaml_value, &"ws-opts.path")
-        .and_then(|v| v.as_str())
+    let path = get_yaml_value_with_fallback(&yaml_value, &["ws-opts.path", "xhttp-opts.path"])
         .unwrap_or("/");
     let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
         .and_then(|v| v.as_str())
         .unwrap_or("chrome");
     let skip_cert_verify = get_yaml_value(&yaml_value, &"skip-cert-verify")
         .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+        .unwrap_or(false);
+
+    let network = get_yaml_value(&yaml_value, &"network")
+        .and_then(|v| v.as_str())
+        .unwrap_or("ws");
+
+    let xhttp_mode = get_yaml_value(&yaml_value, &"xhttp-opts.mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let transport = match network {
+        // https://github.com/Leadaxe/sing-box-lx/blob/lx/docs-lx/lx-protocols-transports.md
+        // https://github.com/Leadaxe/sing-box-lx/blob/lx/docs-lx/lx-protocols-transports.md#110-examples
+        "xhttp" => json!({
+            "type": network,
+            "path": path,
+            "mode": xhttp_mode,
+            "host": host,
+            "x_padding_bytes": "100-1000"
+        }),
+        _ => json!({
+            "type": network,
+            "path": path,
+            "headers": {"Host": host},
+            "early_data_header_name": "Sec-WebSocket-Protocol"
+        }),
+    };
 
     let vless_jsonvalue = json!({
         "type": "vless",
@@ -86,12 +106,7 @@ fn build_vless_singbox_config(
                 "fingerprint": client_fingerprint
             }
         },
-        "transport": {
-            "type": network,
-            "path": path,
-            "headers": {"Host": host},
-            "early_data_header_name": "Sec-WebSocket-Protocol"
-        }
+        "transport": transport
     });
 
     let json_string = serde_json::to_string_pretty(&vless_jsonvalue).unwrap_or_default();
@@ -109,35 +124,53 @@ fn build_vmess_singbox_config(
         .and_then(|v| v.as_str())
         .unwrap_or("00000000-0000-0000-0000-000000000000");
 
-    let cipher = get_yaml_value(&yaml_value, &"cipher")
-        .and_then(|v| v.as_str())
-        .unwrap_or("zero");
     let alter_id = get_yaml_value(&yaml_value, &"alterId")
         .and_then(|v| v.as_i64())
         .unwrap_or(0);
+    let cipher = get_yaml_value(&yaml_value, &"cipher")
+        .and_then(|v| v.as_str())
+        .unwrap_or("zero");
 
     let tls = get_yaml_value(&yaml_value, &"tls")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
     let servername = get_yaml_value_with_fallback(&yaml_value, &["servername"]).unwrap_or_default(); // priority over wss host
-    let host = get_yaml_value(&yaml_value, &"ws-opts.headers.Host")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
+    let host =
+        get_yaml_value_with_fallback(&yaml_value, &["ws-opts.headers.Host", "xhttp-opts.host"])
+            .unwrap_or("");
 
-    let network = get_yaml_value(&yaml_value, &"network")
-        .and_then(|v| v.as_str())
-        .unwrap_or("ws");
-
-    let path = get_yaml_value(&yaml_value, &"ws-opts.path")
-        .and_then(|v| v.as_str())
+    let path = get_yaml_value_with_fallback(&yaml_value, &["ws-opts.path", "xhttp-opts.path"])
         .unwrap_or("/");
     let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
         .and_then(|v| v.as_str())
         .unwrap_or("chrome");
     let skip_cert_verify = get_yaml_value(&yaml_value, &"skip-cert-verify")
         .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+        .unwrap_or(false);
+
+    let network = get_yaml_value(&yaml_value, &"network")
+        .and_then(|v| v.as_str())
+        .unwrap_or("ws");
+
+    let xhttp_mode = get_yaml_value(&yaml_value, &"xhttp-opts.mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let transport = match network {
+        "xhttp" => json!({
+            "type": network,
+            "path": path,
+            "mode": xhttp_mode,
+            "host": host,
+            "x_padding_bytes": "100-1000"
+        }),
+        _ => json!({
+            "type": network,
+            "path": path,
+            "headers": {"Host": host},
+            "early_data_header_name": "Sec-WebSocket-Protocol"
+        }),
+    };
 
     let vmess_jsonvalue = json!({
         "type": "vmess",
@@ -156,11 +189,7 @@ fn build_vmess_singbox_config(
                 "fingerprint": client_fingerprint
             }
         },
-        "transport": {
-            "type": network,
-            "path": path,
-            "headers": {"Host": host}
-        }
+        "transport": transport
     });
 
     let json_string = serde_json::to_string_pretty(&vmess_jsonvalue).unwrap_or_default();
@@ -178,25 +207,43 @@ fn build_trojan_singbox_config(
         .and_then(|v| v.as_str())
         .unwrap_or_default();
 
-    let network = get_yaml_value(&yaml_value, &"network")
-        .and_then(|v| v.as_str())
-        .unwrap_or("ws");
-
     let servername =
         get_yaml_value_with_fallback(&yaml_value, &["sni", "servername"]).unwrap_or_default();
-    let host = get_yaml_value(&yaml_value, &"ws-opts.headers.Host")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
+    let host =
+        get_yaml_value_with_fallback(&yaml_value, &["ws-opts.headers.Host", "xhttp-opts.host"])
+            .unwrap_or("");
 
-    let path = get_yaml_value(&yaml_value, &"ws-opts.path")
-        .and_then(|v| v.as_str())
+    let path = get_yaml_value_with_fallback(&yaml_value, &["ws-opts.path", "xhttp-opts.path"])
         .unwrap_or("/");
     let client_fingerprint = get_yaml_value(&yaml_value, &"client-fingerprint")
         .and_then(|v| v.as_str())
         .unwrap_or("chrome");
     let skip_cert_verify = get_yaml_value(&yaml_value, &"skip-cert-verify")
         .and_then(|v| v.as_bool())
-        .unwrap_or(true);
+        .unwrap_or(false);
+
+    let network = get_yaml_value(&yaml_value, &"network")
+        .and_then(|v| v.as_str())
+        .unwrap_or("ws");
+
+    let xhttp_mode = get_yaml_value(&yaml_value, &"xhttp-opts.mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream-one");
+    let transport = match network {
+        "xhttp" => json!({
+            "type": network,
+            "path": path,
+            "mode": xhttp_mode,
+            "host": host,
+            "x_padding_bytes": "100-1000"
+        }),
+        _ => json!({
+            "type": network,
+            "path": path,
+            "headers": {"Host": host},
+            "early_data_header_name": "Sec-WebSocket-Protocol"
+        }),
+    };
 
     let trojan_jsonvalue = json!({
         "type": "trojan",
@@ -206,7 +253,7 @@ fn build_trojan_singbox_config(
         "password": password,
         "network": "tcp", // 不要填错到这里
         "tls": {
-            "enabled": !servername.ends_with("workers.dev"), // 手动修改tls模式
+            "enabled": !servername.ends_with("workers.dev"),
             "server_name": servername,
             "insecure": skip_cert_verify,
             "utls": {
@@ -214,12 +261,7 @@ fn build_trojan_singbox_config(
                 "fingerprint": client_fingerprint
             }
         },
-        "transport": {
-            "type": network,
-            "path": path,
-            "headers": {"Host": host},
-            "early_data_header_name": "Sec-WebSocket-Protocol"
-        }
+        "transport": transport
     });
 
     let json_string = serde_json::to_string_pretty(&trojan_jsonvalue).unwrap_or_default();
