@@ -2,20 +2,20 @@
 
 # proxies:
   # id 1
-  - name: vless-ws
-    server: ""
-    port: 80
-    type: vless
-    uuid: 5be9524f-ed57-4957-9644-00be2a1e8e83      # 修改这里
-    network: ws
-    udp: false
-    tls: false
-    client-fingerprint: chrome
-    skip-cert-verify: true
-    ws-opts:
-      path: /?ed=2048                               # 修改这里
-      headers:
-        Host: vless.username.workers.dev            # 修改这里
+  # - name: vless-ws
+  #   server: ""
+  #   port: 80
+  #   type: vless
+  #   uuid: 5be9524f-ed57-4957-9644-00be2a1e8e83      # 修改这里
+  #   network: ws
+  #   udp: false
+  #   tls: false
+  #   client-fingerprint: chrome
+  #   skip-cert-verify: true
+  #   ws-opts:
+  #     path: /                                       # 修改这里
+  #     headers:
+  #       Host: vless.username.workers.dev            # 修改这里
 
   # id 2
   - name: vless-ws-tls
@@ -25,14 +25,14 @@
     uuid: 0195cf0e-1b62-7ecf-892e-3bc510e47915      # 修改这里
     network: ws
     udp: false
-    tls: true                                       # 这个跟前面那个不同
-    servername: vless.pages.dev                     # 修改这里
+    tls: true
+    servername: vless.example.com                   # 修改这里
     client-fingerprint: chrome
     skip-cert-verify: true
     ws-opts:
-      path: /?ed=2048                               # 修改这里
+      path: /                                       # 修改这里
       headers:
-        Host: vless.pages.dev                       # 修改这里
+        Host: vless.example.com                     # 修改这里
 
   # id 3：clash核心不支持trojan-ws，只支持trojan-ws-tls
   - name: trojan-ws-tls
@@ -42,81 +42,140 @@
     password: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa  # 修改这里
     network: ws
     udp: false
-    sni: trojan.pages.dev                           # 修改这里
+    sni: trojan.example.com                         # 修改这里
     client-fingerprint: chrome
     skip-cert-verify: true
     ws-opts:
       path: /                                       # 修改这里
       headers:
-        Host: trojan.pages.dev                      # 修改这里
+        Host: trojan.example.com                    # 修改这里
 
   # id 4
-  - name: shadowsocks-v2ray_plugin-nTLS
-    server: ""
-    port: 80
-    type: ss
-    cipher: none
-    password: none                                  # 这个值，修改无效
-    udp: false
-    plugin: v2ray-plugin
-    plugin-opts:
-      mode: websocket
-      path: /127.0.0.1-443                          # 修改这里
-      host: ss-v2ray.pages.dev                      # 修改这里
-      tls: false                                    # 选择性修改这里，确定是否开启TLS，使用什么端口
-      mux: false
+  # - name: shadowsocks-ws
+  #   server: ""
+  #   port: 80
+  #   type: ss
+  #   cipher: none                                    # 修改这里
+  #   password: none                                  # 修改这里
+  #   udp: false
+  #   plugin: v2ray-plugin
+  #   plugin-opts:
+  #     mode: websocket
+  #     path: /                                       # 修改这里
+  #     host: ss.username.workers.dev                 # 修改这里
+  #     tls: false
+  #     mux: false
 
   # id 5
-  - name: shadowsocks-v2ray_plugin-ws
+  - name: shadowsocks-ws-tls
     server: ""
     port: 443
     type: ss
-    cipher: none
-    password: none                                  # 这个值，修改无效
+    cipher: none                                    # 修改这里，可选：aes-128-gcm、aes-256-gcm、chacha20-ietf-poly1305、2022-blake3-aes-128-gcm、2022-blake3-aes-256-gcm、2022-blake3-chacha20-poly1305等
+    password: a1234567                              # 修改这里
     udp: false
     plugin: v2ray-plugin
     plugin-opts:
       mode: websocket
-      path: /127.0.0.1-443                          # 修改这里
-      host: ss-v2ray-tls.pages.dev                  # 修改这里
-      tls: true                                     # 选择性修改这里，确定是否开启TLS，使用什么端口
+      path: /                                       # 修改这里
+      host: ss.example.com                          # 修改这里
+      tls: true
       mux: false
 
   # id 6
-  - name: vmess-zero-ws-nTLS
-    port: 80
-    server: ""
-    type: vmess
-    uuid: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa      # 修改这里
-    alterId: 0                                      # 这个不要自作聪明修改它，服务端不支持，会导致节点无法使用
-    cipher: zero
-    udp: false
-    tls: false                                      # 不是TLS的，一定要关闭它，其它字段不要删除
-    skip-cert-verify: true
-    servername: vmess-zero.username.workers.dev     # 修改这里，"priority over wss host"
-    network: ws
-    ws-opts:
-      path: /                                       # 修改这里
-      headers:
-        Host: vmess-zero.username.workers.dev       # 修改这里
+  # - name: vmess-ws
+  #   port: 80
+  #   server: ""
+  #   type: vmess
+  #   uuid: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa      # 修改这里
+  #   alterId: 0                                      # 这个不要自作聪明修改它，服务端不支持，会导致节点无法使用
+  #   cipher: zero                                    # 可选修改这里
+  #   udp: false
+  #   tls: false
+  #   skip-cert-verify: true
+  #   servername: vmess.username.workers.dev          # 修改这里，"priority over wss host"
+  #   network: ws
+  #   ws-opts:
+  #     path: /                                       # 修改这里
+  #     headers:
+  #       Host: vmess.username.workers.dev            # 修改这里
 
   # id 7
-  - name: vmess-zero-ws-TLS
+  - name: vmess-ws-tls
     port: 443
     server: ""
     type: vmess
     uuid: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa      # 修改这里
     alterId: 0                                      # 这个不要自作聪明修改它，服务端不支持，会导致节点无法使用
-    cipher: zero
+    cipher: zero                                    # 可选修改这里
     udp: false
-    tls: true                                       # TLS的，一定要开启它
+    tls: true
     skip-cert-verify: true
-    servername: vmess-zero.username.workers.dev     # 修改这里
+    servername: vmess.example.com                   # 修改这里
     network: ws
     ws-opts:
       path: /                                       # 修改这里
       headers:
-        Host: vmess-zero.username.workers.dev       # 修改这里
+        Host: vmess.example.com                     # 修改这里
+
+  # id 8
+  - name: vless-xhttp-tls
+    server: ""
+    port: 443
+    type: vless
+    uuid: 0195cf0e-1b62-7ecf-892e-3bc510e47915      # 修改这里
+    network: xhttp
+    udp: false
+    tls: true                                       
+    servername: vless.example.com                   # 修改这里
+    client-fingerprint: chrome
+    skip-cert-verify: true
+    xhttp-opts:
+      host: vless.example.com                       # 修改这里
+      mode: stream-one
+      path: /                                       # 修改这里
+    alpn:
+      - h2
+
+# 目前mihomo只支持vless的xhttp配置，下面只是预测trojan和vmess的xhttp配置形式，是否被采纳这种格式，还未知，这里只用于转换为v2ray、sing-box
+
+  # id 9
+  - name: trojan-xhttp-tls
+    server: ""
+    port: 443
+    type: trojan
+    password: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa  # 修改这里
+    network: xhttp
+    udp: false
+    sni: trojan.example.com                         # 修改这里
+    client-fingerprint: chrome
+    skip-cert-verify: true
+    xhttp-opts:
+      host: trojan.example.com                      # 修改这里
+      mode: stream-one
+      path: /                                       # 修改这里
+    alpn:
+      - h2
+
+  # id 10
+  - name: vmess-xhttp-tls
+    port: 443
+    server: ""
+    type: vmess
+    uuid: 0195cf0d-f3f8-72f4-80dc-5385831c8dfa      # 修改这里
+    alterId: 0                                      # 这个不要自作聪明修改它，服务端不支持，会导致节点无法使用
+    cipher: zero                                    # 可选修改这里
+    udp: false
+    tls: true
+    skip-cert-verify: true
+    servername: vmess.example.com                   # 修改这里
+    network: xhttp
+    xhttp-opts:
+      host: vmess.example.com                       # 修改这里
+      mode: stream-one
+      path: /                                       # 修改这里
+    alpn:
+      - h2
+
 
 # 后面可以继续模仿前面的配置添加
-# 注意：同一个脚本，在这里推荐写一个，如果同脚本配置多个节点，使用singbox、clash会导致所有的节点无法使用，需要等待一段时间后，才能使用。
