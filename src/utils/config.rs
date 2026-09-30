@@ -87,3 +87,18 @@ pub fn get_yaml_value_with_fallback<'a>(yaml: &'a YamlValue, paths: &[&str]) -> 
         .filter_map(|&path| get_yaml_value(yaml, path).and_then(|v| v.as_str()))
         .next()
 }
+
+pub fn get_alpn_yaml_value(yaml: &YamlValue) -> Option<Vec<String>> {
+    yaml.get("alpn").and_then(|alpn| match alpn {
+        YamlValue::Sequence(seq) => {
+            let values = seq
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_owned))
+                .collect::<Vec<_>>();
+            (!values.is_empty()).then_some(values)
+        }
+        // 兼容yaml文件中，alpn值是字符串情况，如：alpn: "h2"
+        YamlValue::String(value) => Some(vec![value.clone()]),
+        _ => None,
+    })
+}
