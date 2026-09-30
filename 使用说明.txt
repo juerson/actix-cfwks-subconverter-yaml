@@ -1,6 +1,6 @@
 【YAML】本工具的功能：
 
-批量将优选的IP或域名，写入到 Cloudflare 搭建的 vless/trojan/ss-v2ray/vmess 协议的配置节点中，并转换为 v2ray、sing-box、clash.mate/mihomo 订阅!
+批量将优选的IP或域名，写入到 Cloudflare 搭建的 vless/trojan/shadowsocks/vmess 协议的配置节点中，并转换为 v2ray、sing-box、clash.mate/mihomo 订阅!
 
 —————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -38,14 +38,17 @@ http://127.0.0.1:10111/sub?target=clash&id=1
 http://127.0.0.1:10111/sub?target=v2ray&type=vless
 http://127.0.0.1:10111/sub?target=v2ray&type=trojan
 http://127.0.0.1:10111/sub?target=v2ray&type=ss
+http://127.0.0.1:10111/sub?target=v2ray&type=vmess
 
 http://127.0.0.1:10111/sub?target=singbox&type=vless
 http://127.0.0.1:10111/sub?target=singbox&type=trojan
 http://127.0.0.1:10111/sub?target=singbox&type=ss
+http://127.0.0.1:10111/sub?target=singbox&type=vmess
 
 http://127.0.0.1:10111/sub?target=clash&type=vless
 http://127.0.0.1:10111/sub?target=clash&type=trojan
 http://127.0.0.1:10111/sub?target=clash&type=ss
+http://127.0.0.1:10111/sub?target=clash&type=vmess
 ———————————————————————————————————————————————————————————————————————
 http://127.0.0.1:10111/sub?target=v2ray&tls=true
 http://127.0.0.1:10111/sub?target=v2ray&tls=false&type=vless
@@ -71,6 +74,22 @@ http://127.0.0.1:10111/sub?target=clash&column=city
 http://127.0.0.1:10111/sub?target=v2ray&source=data\result.csv
 http://127.0.0.1:10111/sub?target=singbox&source=???
 http://127.0.0.1:10111/sub?target=clash&source=???
+
+以上的参数均可随意组合，具体效果自己研究。
+
+转换订阅问题：
+    1.转换为v2ray的，支持：
+        ws：vless+ws[+tls]、trojan+ws[+tls]、vmess+ws+tls、shadowsocks+ws+tls
+        xhttp：vless+xhttp+tls、trojan+xhttp+tls、vmess+xhttp+tls
+        注：目前发现，v2rayNG 不支持 xhttp，静候以后软件适配。新版本v2rayN使用vmess+xhttp+tls的很大可能会出现延迟-1，建议使用较前、支持xhttp的版本
+    2.转换为singbox的，支持：
+        ws: vless+ws[+tls]、trojan+ws[+tls]、vmess+ws+tls、shadowsocks+ws+tls
+        xhttp: vless+xhttp+tls、trojan+xhttp+tls、vmess+xhttp+tls
+        注：
+          (a) xhttp，目前官方 sing-box 不支持，sing-box 分支的 https://github.com/Leadaxe/sing-box-lx 内核支持，要使用就要下载它的内核替换 `GUI.for.SingBox` 的内核
+          (b) 使用新的sing-box.json配置模板，可以将订阅导入 https://github.com/SagerNet/sing-box/releases/tag/v1.14.2 这个新版本界面端使用，该版本只支持全ws的，不支持xhttp的
+    3.转换为clash的，config.yaml配置文件本来就是clash的节点配置，只要里面的参数没有写错，大部分协议都支持，特别注意：trojan和vmess的xhttp都现在不支持mihomo，只能转换为v2ray、singbox订阅使用
+
 —————————————————————————————————————————————————————————————————————————————————————————————————
 
 订阅URL的参数介绍：
@@ -94,8 +113,8 @@ http://127.0.0.1:10111/sub?target=clash&source=???
 - type/proxyType
     - vless：vless协议，默认
     - trojan：trojan协议
-    - ss：ss-v2ray协议
-    - vmess: vmess-zero-ws协议
+    - ss：shadowsocks协议
+    - vmess: vmess协议
 - id/userid
     - 0，表示随机选择，有效值范围：[1,255]
 - column/columnName 只有csv中有对应的字段才生效，否则为空
@@ -108,14 +127,13 @@ http://127.0.0.1:10111/sub?target=clash&source=???
 
 特别说明：
 
-1、n（nodesize、nodecount）：您需要的节点数量。是从数据源所在路径中，读取的所有数据中
+1、n（nodesize、nodecount）：您需要的节点数量。是从数据源所在路径中，读取的所有数据中，选前n个地址构建节点
 注意： 
-  (1)如果文件内的txt、csv文件比较多，读取第一个文件的个数小于nodesize，自然要读取下一个文件的数据，
-     就会出现，哪个文件的数据在前，哪个文件数据在后的问题，这个跟文件的默认排序有关；
+  (1)如果文件内的txt、csv文件比较多，读取第一个文件的个数小于nodesize，自然要读取下一个文件的数据，就会出现，哪个文件的数据在前，哪个文件数据在后的问题，这个跟文件的默认排序有关；
   (2)不是从读取的全部数据中，随机nodesize个数据，而是按照读取到的数据先后顺序
   (3)默认值：v2ray默认是300个节点；sing-box、clash默认50个节点，最大150个节点。
   (4)可能因TLS模式、端口和workers.dev的节点冲突，多次都随机选择它们，出现冲突，不符合的要求，多次丢弃，导致生成的节点少（不是因IP地址数据少导致）。
-2、type（proxytype）：选择什么协议的节点？只能选择vless、trojan，这里指您在配置文件中，存放的节点类型，符合要求的，才使用它。
+2、type（proxytype）：选择什么协议的节点？只能选择vless、trojan、vmess、ss，这里指您在配置文件中，存放的节点类型，符合要求的，才使用它。
 3、id（userid）：指定使用配置文件的哪个节点，生成v2ray链接或sing-box、clash配置文件？它的值是虚构的，是根据配置文件的数组下标+1来计算的。
 例如：
   id=1就是使用第一个节点的配置信息，2就是使用第二个节点的配置信息，以此类推。
@@ -127,7 +145,7 @@ http://127.0.0.1:10111/sub?target=clash&source=???
 4、tls（tlsMode）：用于控制使用哪些端口（包括使用哪些节点）。
   tls=true/1表示使用加密TLS端口和节点；
   false/0表示使用非加密TLS的端口和节点(生成的trojan可能有问题)；
-  如果为空/不传入该参数，就不区分TLS和非TLS，端口同样不区别。
+  如果为空/不传入该参数，就不区分TLS和非TLS，端口同样不区别，也就是你配置文件中，配置什么节点，所有都使用到。
 5、dport（defaultPort）：默认0端口，随机TLS端口或随机非TLS端口。
   data目录下，读取到txt、csv文件的数据中，没有端口的情况，才使用这里设置的默认端口，host含有workers.dev，就由内部随机生成。
 注意：这里设置的端口不保证应用到所有节点中，程序可能会根据是否含有workers.dev改为其它端口（随机TLS端口或非TLS端口）。
@@ -140,10 +158,3 @@ http://127.0.0.1:10111/sub?target=clash&source=???
   2、当传入的是文件路径，必须是txt或csv的有效文件路径。
   3、当传入的是文件夹路径，该路径下，必须含有txt或csv文件。
   4、当传入的是网络链接，必须以"https://"开头，".csv"或".txt"结尾的链接。
-
-—————————————————————————————————————————————————————————————————————————————————————————————————
-温馨提示：
-
-  1、使用 Cloudflare workers 搭建的 vless/trojan/ss-v2ray 节点，转换为 singbox/clash.mate/mihomo 订阅使用，PROXYIP 地址可能会丢失，跟没有设置 PROXYIP 效果一样，也就是不能使用它访问一些地区封锁的网站，比如：ChatGPT、Netflix 等。
-  2、ss-v2ray+tls+websocket，订阅链接(v2ray)只能在支持v2ray-plugin扩展的代理客户端中使用，直接复制或在v2rayN中订阅无法添加使用的，经测试可以黏贴到NekoBox中使用。
-      例如：ss://bm9uZTowMTk1YzQ3Ni02M2Y4LTcyMzItYWM0Mi0wYWMxZWFhYmU5MzQ=@104.19.177.137:2096?plugin=v2ray-plugin;tls;mux%3D0;mode%3Dwebsocket;path%3D/192.168.1.1-443;host%3Dss1.pages.dev#⑤|104.19.177.137:2096
